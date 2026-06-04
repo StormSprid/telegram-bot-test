@@ -38,9 +38,9 @@ class LlmService:
         user_text: str,
         chunks: list[RetrievedChunk],
         history: list[dict],
-    ) -> tuple[str, bool]:
+    ) -> tuple[str, bool, int]:
         if not self._client:
-            return self._offline_answer(chunks), False
+            return self._offline_answer(chunks), False, 0
         try:
             resp = await self._client.chat.completions.create(
                 model=self._model,
@@ -48,10 +48,11 @@ class LlmService:
                 temperature=0.3,
                 max_tokens=1024,
             )
-            return (resp.choices[0].message.content or "").strip(), True
+            tokens = resp.usage.total_tokens if resp.usage else 0
+            return (resp.choices[0].message.content or "").strip(), True, tokens
         except Exception as exc:
             logger.warning("LLM answer failed: %s", exc)
-            return _ERR_MSG, False
+            return _ERR_MSG, False, 0
 
     def _make_stream(
         self, user_text: str, chunks: list[RetrievedChunk], history: list[dict]
