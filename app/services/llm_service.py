@@ -54,6 +54,33 @@ class LlmService:
             logger.warning("LLM answer failed: %s", exc)
             return _ERR_MSG, False, 0
 
+    async def translate(self, text: str, target_lang: str) -> str:
+        if not self._client:
+            return text
+        _LANG_NAMES = {"kk": "казахский язык", "en": "английский язык"}
+        lang_name = _LANG_NAMES.get(target_lang, "русский язык")
+        try:
+            resp = await self._client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            f"Переведи следующий текст на {lang_name}. "
+                            "Сохрани форматирование и структуру. "
+                            "Верни только перевод без пояснений."
+                        ),
+                    },
+                    {"role": "user", "content": text},
+                ],
+                temperature=0.1,
+                max_tokens=1024,
+            )
+            return (resp.choices[0].message.content or text).strip()
+        except Exception as exc:
+            logger.warning("Translation to %s failed: %s", target_lang, exc)
+            return text
+
     def _make_stream(
         self, user_text: str, chunks: list[RetrievedChunk], history: list[dict]
     ) -> AsyncIterator[str]:

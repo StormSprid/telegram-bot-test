@@ -7,6 +7,22 @@ def _norm(text: str) -> str:
     return " ".join(text.lower().replace("ё", "е").split())
 
 
+def detect_language(text: str) -> str:
+    """Returns 'kk' for Kazakh, 'ru' for Russian, 'en' for English."""
+    kazakh_chars = set("әіңғүұқөһ")
+    kazakh_words = {"салем", "сәлем", "қалай", "жұмыс", "істейді",
+                    "қайда", "бояу", "жеткізу", "төлем", "бар", "ма"}
+    text_lower = text.lower()
+    if any(c in text_lower for c in kazakh_chars):
+        return "kk"
+    if any(w in text_lower.split() for w in kazakh_words):
+        return "kk"
+    english_words = {"how", "what", "where", "when", "why", "is", "are", "do"}
+    if any(w in text_lower.split() for w in english_words):
+        return "en"
+    return "ru"
+
+
 def _is_latin(text: str) -> bool:
     """True when query is predominantly Latin-script (English etc.), not Russian/Kazakh."""
     latin = sum(1 for c in text if "a" <= c.lower() <= "z")
