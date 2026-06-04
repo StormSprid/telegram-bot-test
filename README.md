@@ -109,6 +109,22 @@ docker build -t ck-bot .
 docker run --env-file .env -p 8000:8000 ck-bot
 ```
 
+### DigitalOcean App Platform
+
+Приложение развёрнуто на DigitalOcean App Platform.
+
+1. Создайте новое приложение: **Create App → GitHub → выберите репозиторий**
+2. DigitalOcean автоматически обнаружит `Dockerfile` и настроит сборку
+3. В разделе **Environment Variables** добавьте все переменные из `.env.example`
+4. HTTP-порт — `8000` (уже задан в `Dockerfile`)
+5. После деплоя зарегистрируйте вебхук:
+
+```bash
+python scripts/set_webhook.py --url https://<your-app>.ondigitalocean.app
+```
+
+При каждом пуше в `main` App Platform пересобирает и перезапускает контейнер автоматически.
+
 ---
 
 ## Конфигурация
