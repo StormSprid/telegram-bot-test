@@ -7,6 +7,14 @@ def _norm(text: str) -> str:
     return " ".join(text.lower().replace("ё", "е").split())
 
 
+def _is_latin(text: str) -> bool:
+    """True when query is predominantly Latin-script (English etc.), not Russian/Kazakh."""
+    latin = sum(1 for c in text if "a" <= c.lower() <= "z")
+    cyrillic = sum(1 for c in text if "Ѐ" <= c <= "ӿ")
+    total = latin + cyrillic
+    return total >= 6 and latin / total > 0.6
+
+
 _GREETING  = {"/start","start","привет","здравствуй","здравствуйте","добрый день","доброе утро","добрый вечер","сәлем","салам","hello","hi"}
 _INJECTION = ("игнорируй","ignore previous","ignore all","system prompt","покажи системный","раскрой промпт","ты не бот","forget instructions","chunk","rag pipeline","системный промпт")
 _CONTACTS  = ("адрес","где находится","контакт","телефон","номер","email","почта","где магазин","где офис","шоурум","ваш магазин","как доехать","как добраться","как найти")
@@ -47,6 +55,7 @@ def detect_intent(text: str) -> Intent:
     if any(t in n for t in _OUT) and not any(t in n for t in _COMPANY): return Intent.OUT_OF_SCOPE
     if any(t in n for t in _SENSITIVE):                                 return Intent.SENSITIVE
     if any(t in n for t in _COMPARISON):                                return Intent.GENERAL_RAG
+    if _is_latin(text):                                                 return Intent.GENERAL_RAG
     if any(t in n for t in _CONTACTS):                                  return Intent.CONTACTS
     if any(t in n for t in _DELIVERY):                                  return Intent.DELIVERY
     if any(t in n for t in _PAYMENT):                                   return Intent.PAYMENT

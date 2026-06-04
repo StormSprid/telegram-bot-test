@@ -19,7 +19,7 @@ class RetrieverPort(Protocol):
 class LlmPort(Protocol):
     async def answer(
         self, user_text: str, chunks: list[RetrievedChunk], history: list[dict]
-    ) -> tuple[str, bool]: ...
+    ) -> tuple[str, bool, int]: ...
 
     async def stream_answer(
         self, user_text: str, chunks: list[RetrievedChunk], history: list[dict]
@@ -87,9 +87,9 @@ class RagService:
                 await self._notifier.notify_unanswered(text, chat_id)
             return RagAnswer(text=fb, sources=chunks, used_llm=False)
 
-        answer_text, used_llm = await self._llm.answer(text, chunks, self._memory.get(chat_id))
+        answer_text, used_llm, tokens = await self._llm.answer(text, chunks, self._memory.get(chat_id))
         self._save(chat_id, text, answer_text)
-        self._rec(intent, used_llm, t0)
+        self._rec(intent, used_llm, t0, tokens)
         return RagAnswer(text=answer_text, sources=chunks, used_llm=used_llm)
 
     async def stream_answer(self, chat_id: int, user_text: str) -> AsyncIterator[str]:
@@ -137,6 +137,6 @@ class RagService:
         self._memory.add(chat_id, "user", user_text)
         self._memory.add(chat_id, "assistant", answer)
 
-    def _rec(self, intent: Intent, used_llm: bool, t0: float) -> None:
+    def _rec(self, intent: Intent, used_llm: bool, t0: float, tokens: int = 0) -> None:
         if self._metrics:
-            self._metrics.record_request(intent.value, used_llm, (time.monotonic() - t0) * 1000)
+            self._metrics.record_request(intent.value, used_llm, (time.monotonic() - t0) * 1000, tokens)
