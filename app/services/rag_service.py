@@ -6,7 +6,7 @@ from typing import Protocol
 
 from app.policies.answer_policy import get_deterministic_answer
 from app.router.intents import Intent
-from app.router.router import detect_intent
+from app.router.router import detect_intent, detect_language
 from app.schemas.models import RagAnswer, RetrievedChunk
 from app.services.dialog_memory import DialogMemory
 from app.services.guardrails import Guardrails
@@ -24,6 +24,8 @@ class LlmPort(Protocol):
     async def stream_answer(
         self, user_text: str, chunks: list[RetrievedChunk], history: list[dict]
     ) -> AsyncIterator[str]: ...
+
+    async def translate(self, text: str, target_lang: str) -> str: ...
 
 
 class MetricsPort(Protocol):
@@ -72,9 +74,12 @@ class RagService:
 
         det = get_deterministic_answer(intent)
         if det:
+            lang = detect_language(text)
+            if lang != "ru":
+                det = await self._llm.translate(det, lang)
             self._save(chat_id, text, det)
-            self._rec(intent, False, t0)
-            return RagAnswer(text=det, used_llm=False)
+            self._rec(intent, lang != "ru", t0)
+            return RagAnswer(text=det, used_llm=lang != "ru")
 
         chunks = self._retriever.retrieve(text, top_k=self._top_k)
         if not self._guardrails.has_context(chunks):
@@ -109,8 +114,11 @@ class RagService:
 
         det = get_deterministic_answer(intent)
         if det:
+            lang = detect_language(text)
+            if lang != "ru":
+                det = await self._llm.translate(det, lang)
             self._save(chat_id, text, det)
-            self._rec(intent, False, t0)
+            self._rec(intent, lang != "ru", t0)
             yield det
             return
 
